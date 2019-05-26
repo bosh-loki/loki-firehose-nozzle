@@ -4,11 +4,11 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/bosh-loki/firehose-loki-client/messages"
+	"github.com/bosh-loki/loki-firehose-nozzle/messages"
 
 	"github.com/prometheus/common/log"
 
-	"github.com/bosh-loki/firehose-loki-client/lokiclient"
+	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/cloudfoundry/noaa/consumer"

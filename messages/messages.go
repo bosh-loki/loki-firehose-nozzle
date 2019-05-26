@@ -3,7 +3,7 @@ package messages
 import (
 	"strings"
 
-	"github.com/bosh-loki/firehose-loki-client/utils"
+	"github.com/bosh-loki/loki-firehose-nozzle/utils"
 	"github.com/cloudfoundry/sonde-go/events"
 )
 

@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosh-loki/firehose-loki-client/messages"
+	"github.com/bosh-loki/loki-firehose-nozzle/messages"
 
 	"github.com/prometheus/common/log"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	"github.com/bosh-loki/firehose-loki-client/logproto"
+	"github.com/bosh-loki/loki-firehose-nozzle/logproto"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 )

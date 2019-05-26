@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/bosh-loki/firehose-loki-client/lokiclient"
-	"github.com/bosh-loki/firehose-loki-client/lokifirehosenozzle"
+	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
+	"github.com/bosh-loki/loki-firehose-nozzle/lokifirehosenozzle"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/common/log"
