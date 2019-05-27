@@ -3,12 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/bosh-loki/loki-firehose-nozzle/extralabels"
 	"os"
 	"os/signal"
 
 	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 	"github.com/bosh-loki/loki-firehose-nozzle/lokifirehosenozzle"
-	"github.com/bosh-loki/loki-firehose-nozzle/messages"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/common/log"
@@ -43,6 +43,10 @@ var (
 	subscriptionID = kingpin.Flag(
 		"subscription-id", "Id for the subscription ($FIREHOSE_SUBSCRIPTION_ID)",
 	).Envar("FIREHOSE_SUBSCRIPTION_ID").Default("loki").String()
+
+	baseLabels = kingpin.Flag(
+		"base-labels", "Extra labels you want to annotate your events with, example: '--base-labels=env:dev,something:other' ($FIREHOSE_BASE_LABELS)",
+	).Envar("$FIREHOSE_BASE_LABELS").Default("").String()
 )
 
 type LokiAdapter struct {
@@ -65,7 +69,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	baseLabels := messages.LabelSet{}
+	baseLabels, err := extralabels.SetBaseLabels(*baseLabels)
+	if err != nil {
+		log.Fatal(err)
+	}
 	lokiClient, err := lokiclient.NewWithDefaults(
 		fmt.Sprintf("http://%s:%s/api/prom/push", *lokiEndpoint, *lokiPort),
 		baseLabels,
