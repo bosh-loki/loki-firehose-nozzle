@@ -2,11 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 
 	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 	"github.com/bosh-loki/loki-firehose-nozzle/lokifirehosenozzle"
+	"github.com/bosh-loki/loki-firehose-nozzle/messages"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/common/log"
@@ -29,6 +31,14 @@ var (
 	skipSSLValidation = kingpin.Flag(
 		"skip-ssl-verify", "Disable SSL Verify ($FIREHOSE_SKIP_SSL_VERIFY)",
 	).Envar("FIREHOSE_SKIP_SSL_VERIFY").Default("false").Bool()
+
+	lokiEndpoint = kingpin.Flag(
+		"loki.endpoint", "IP of Hostname where Loki run ($FIREHOSE_LOKI_ENDPOINT)",
+	).Envar("FIREHOSE_LOKI_ENDPOINT").Required().String()
+
+	lokiPort = kingpin.Flag(
+		"loki.port", "Port where Loki run ($FIREHOSE_LOKI_PORT)",
+	).Envar("FIREHOSE_LOKI_PORT").Default("3100").String()
 )
 
 type LokiAdapter struct {
@@ -51,7 +61,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, cfClient, "loki")
+	baseLabels := messages.LabelSet{}
+	lokiClient, err := lokiclient.NewWithDefaults(
+		fmt.Sprintf("http://%s:%s/api/prom/push", *lokiEndpoint, *lokiPort),
+		baseLabels,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, cfClient, lokiClient, "loki")
 
 	firehose, errorhose := client.Connect()
 	if firehose == nil {

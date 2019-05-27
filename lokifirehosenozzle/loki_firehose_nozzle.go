@@ -6,8 +6,6 @@ import (
 
 	"github.com/bosh-loki/loki-firehose-nozzle/messages"
 
-	"github.com/prometheus/common/log"
-
 	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 
 	"github.com/cloudfoundry-community/go-cfclient"
@@ -31,16 +29,16 @@ type LokiFirehoseNozzle struct {
 	subscriptionID string
 }
 
-func NewLokiFirehoseNozzle(cfConfig *cfclient.Config, cfClient *cfclient.Client, subscriptionID string) Firehose {
-	return &LokiFirehoseNozzle{cfConfig: cfConfig, cfClient: cfClient, subscriptionID: subscriptionID}
+func NewLokiFirehoseNozzle(cfConfig *cfclient.Config, cfClient *cfclient.Client, lokiClient *lokiclient.Client, subscriptionID string) Firehose {
+	return &LokiFirehoseNozzle{
+		cfConfig:       cfConfig,
+		cfClient:       cfClient,
+		lokiClient:     lokiClient,
+		subscriptionID: subscriptionID,
+	}
 }
 
 func (c *LokiFirehoseNozzle) Connect() (<-chan *events.Envelope, <-chan error) {
-	var err error
-	c.lokiClient, err = c.createClient()
-	if err != nil {
-		log.Fatalln(err)
-	}
 	cfConsumer := consumer.New(
 		c.cfClient.Endpoint.DopplerEndpoint,
 		&tls.Config{InsecureSkipVerify: c.cfConfig.SkipSslValidation},
@@ -51,15 +49,6 @@ func (c *LokiFirehoseNozzle) Connect() (<-chan *events.Envelope, <-chan error) {
 	cfConsumer.SetMaxRetryCount(20)
 	cfConsumer.RefreshTokenFrom(&refresher)
 	return cfConsumer.Firehose(c.subscriptionID, "")
-}
-
-func (c *LokiFirehoseNozzle) createClient() (*lokiclient.Client, error) {
-	baseLabels := messages.LabelSet{}
-	lokiClient, err := lokiclient.NewWithDefaults("http://localhost:3100/api/prom/push", baseLabels)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	return lokiClient, nil
 }
 
 func (c *LokiFirehoseNozzle) PostToLoki(e *events.Envelope) {
