@@ -39,6 +39,10 @@ var (
 	lokiPort = kingpin.Flag(
 		"loki.port", "Port where Loki run ($FIREHOSE_LOKI_PORT)",
 	).Envar("FIREHOSE_LOKI_PORT").Default("3100").String()
+
+	subscriptionID = kingpin.Flag(
+		"subscription-id", "Id for the subscription ($FIREHOSE_SUBSCRIPTION_ID)",
+	).Envar("FIREHOSE_SUBSCRIPTION_ID").Default("loki").String()
 )
 
 type LokiAdapter struct {
@@ -70,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, cfClient, lokiClient, "loki")
+	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, cfClient, lokiClient, *subscriptionID)
 
 	firehose, errorhose := client.Connect()
 	if firehose == nil {
