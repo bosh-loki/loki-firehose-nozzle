@@ -3,9 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/bosh-loki/loki-firehose-nozzle/extralabels"
 	"os"
 	"os/signal"
+
+	"github.com/bosh-loki/loki-firehose-nozzle/extralabels"
 
 	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 	"github.com/bosh-loki/loki-firehose-nozzle/lokifirehosenozzle"
@@ -16,37 +17,14 @@ import (
 )
 
 var (
-	apiEndpoint = kingpin.Flag(
-		"api.endpoint", "Cloud Foundry API Endpoint ($FIREHOSE_API_ENDPOINT)",
-	).Envar("FIREHOSE_API_ENDPOINT").Required().String()
-
-	apiUsername = kingpin.Flag(
-		"api.username", "Cloud Foundry API Username ($FIREHOSE_API_USERNAME)",
-	).Envar("FIREHOSE_API_USERNAME").Required().String()
-
-	apiPassword = kingpin.Flag(
-		"api.password", "Cloud Foundry API Password ($FIREHOSE_API_PASSWORD)",
-	).Envar("FIREHOSE_API_PASSWORD").Required().String()
-
-	skipSSLValidation = kingpin.Flag(
-		"skip-ssl-verify", "Disable SSL Verify ($FIREHOSE_SKIP_SSL_VERIFY)",
-	).Envar("FIREHOSE_SKIP_SSL_VERIFY").Default("false").Bool()
-
-	lokiEndpoint = kingpin.Flag(
-		"loki.endpoint", "IP of Hostname where Loki run ($FIREHOSE_LOKI_ENDPOINT)",
-	).Envar("FIREHOSE_LOKI_ENDPOINT").Required().String()
-
-	lokiPort = kingpin.Flag(
-		"loki.port", "Port where Loki run ($FIREHOSE_LOKI_PORT)",
-	).Envar("FIREHOSE_LOKI_PORT").Default("3100").String()
-
-	subscriptionID = kingpin.Flag(
-		"subscription-id", "Id for the subscription ($FIREHOSE_SUBSCRIPTION_ID)",
-	).Envar("FIREHOSE_SUBSCRIPTION_ID").Default("loki").String()
-
-	baseLabels = kingpin.Flag(
-		"base-labels", "Extra labels you want to annotate your events with, example: '--base-labels=env:dev,something:other' ($FIREHOSE_BASE_LABELS)",
-	).Envar("$FIREHOSE_BASE_LABELS").Default("").String()
+	apiEndpoint       = kingpin.Flag("api-endpoint", "Cloud Foundry API Endpoint ($FIREHOSE_API_ENDPOINT)").Envar("FIREHOSE_API_ENDPOINT").Required().String()
+	apiUsername       = kingpin.Flag("api-username", "Cloud Foundry API Username ($FIREHOSE_API_USERNAME)").Envar("FIREHOSE_API_USERNAME").Required().String()
+	apiPassword       = kingpin.Flag("api-password", "Cloud Foundry API Password ($FIREHOSE_API_PASSWORD)").Envar("FIREHOSE_API_PASSWORD").Required().String()
+	skipSSLValidation = kingpin.Flag("skip-ssl-verify", "Disable SSL Verify ($FIREHOSE_SKIP_SSL_VERIFY)").Envar("FIREHOSE_SKIP_SSL_VERIFY").Default("false").Bool()
+	lokiEndpoint      = kingpin.Flag("loki-endpoint", "IP of Hostname where Loki run ($FIREHOSE_LOKI_ENDPOINT)").Envar("FIREHOSE_LOKI_ENDPOINT").Required().String()
+	lokiPort          = kingpin.Flag("loki-port", "Port where Loki run ($FIREHOSE_LOKI_PORT)").Envar("FIREHOSE_LOKI_PORT").Default("3100").String()
+	subscriptionID    = kingpin.Flag("subscription-id", "Id for the subscription ($FIREHOSE_SUBSCRIPTION_ID)").Envar("FIREHOSE_SUBSCRIPTION_ID").Default("loki").String()
+	baseLabels        = kingpin.Flag("base-labels", "Extra labels you want to annotate your events with, example: '--base-labels=env:dev,something:other' ($FIREHOSE_BASE_LABELS)").Envar("$FIREHOSE_BASE_LABELS").Default("").String()
 )
 
 type LokiAdapter struct {

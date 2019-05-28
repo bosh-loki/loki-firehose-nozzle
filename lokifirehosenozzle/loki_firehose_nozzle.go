@@ -53,9 +53,8 @@ func (c *LokiFirehoseNozzle) Connect() (<-chan *events.Envelope, <-chan error) {
 
 func (c *LokiFirehoseNozzle) PostToLoki(e *events.Envelope) {
 	lastLineTime := time.Now()
-	labels := messages.GetLabels(e)
-	// log.Infoln(string(e.GetLogMessage().GetMessage()))
-	_ = c.lokiClient.Handle(labels, lastLineTime, string(e.GetLogMessage().GetMessage()))
+	labels, message := messages.GetMessage(e)
+	_ = c.lokiClient.Handle(labels, lastLineTime, message)
 }
 
 type cfClientTokenRefresh struct {
