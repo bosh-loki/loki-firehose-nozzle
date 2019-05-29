@@ -18,8 +18,8 @@ import (
 
 var (
 	apiEndpoint       = kingpin.Flag("api-endpoint", "Cloud Foundry API Endpoint ($FIREHOSE_API_ENDPOINT)").Envar("FIREHOSE_API_ENDPOINT").Required().String()
-	apiUsername       = kingpin.Flag("api-username", "Cloud Foundry API Username ($FIREHOSE_API_USERNAME)").Envar("FIREHOSE_API_USERNAME").Required().String()
-	apiPassword       = kingpin.Flag("api-password", "Cloud Foundry API Password ($FIREHOSE_API_PASSWORD)").Envar("FIREHOSE_API_PASSWORD").Required().String()
+	uaaClientID       = kingpin.Flag("client-id", "Cloud Foundry UAA Client ID ($FIREHOSE_UAA_CLIENT_ID)").Envar("FIREHOSE_UAA_CLIENT_ID").Required().String()
+	uaaClientSecret   = kingpin.Flag("client-secret", "Cloud Foundry UAA Client Secret ($FIREHOSE_UAA_CLIENT_SECRET)").Envar("FIREHOSE_UAA_CLIENT_SECRET").Required().String()
 	skipSSLValidation = kingpin.Flag("skip-ssl-verify", "Disable SSL Verify ($FIREHOSE_SKIP_SSL_VERIFY)").Envar("FIREHOSE_SKIP_SSL_VERIFY").Default("false").Bool()
 	lokiEndpoint      = kingpin.Flag("loki-endpoint", "IP of Hostname where Loki run ($FIREHOSE_LOKI_ENDPOINT)").Envar("FIREHOSE_LOKI_ENDPOINT").Required().String()
 	lokiPort          = kingpin.Flag("loki-port", "Port where Loki run ($FIREHOSE_LOKI_PORT)").Envar("FIREHOSE_LOKI_PORT").Default("3100").String()
@@ -38,13 +38,10 @@ func main() {
 
 	cfConfig := &cfclient.Config{
 		ApiAddress:        *apiEndpoint,
-		Username:          *apiUsername,
-		Password:          *apiPassword,
-		SkipSslValidation: *skipSSLValidation}
-
-	cfClient, err := cfclient.NewClient(cfConfig)
-	if err != nil {
-		log.Fatal(err)
+		ClientID:          *uaaClientID,
+		ClientSecret:      *uaaClientSecret,
+		SkipSslValidation: *skipSSLValidation,
+		UserAgent:         "loki-firehose-nozzle",
 	}
 
 	baseLabels, err := extralabels.SetBaseLabels(*baseLabels)
@@ -59,7 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, cfClient, lokiClient, *subscriptionID)
+	client := lokifirehosenozzle.NewLokiFirehoseNozzle(cfConfig, lokiClient, *subscriptionID)
 
 	firehose, errorhose := client.Connect()
 	if firehose == nil {

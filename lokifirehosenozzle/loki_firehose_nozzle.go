@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bosh-loki/loki-firehose-nozzle/messages"
+	"github.com/prometheus/common/log"
 
 	"github.com/bosh-loki/loki-firehose-nozzle/lokiclient"
 
@@ -29,16 +30,16 @@ type LokiFirehoseNozzle struct {
 	subscriptionID string
 }
 
-func NewLokiFirehoseNozzle(cfConfig *cfclient.Config, cfClient *cfclient.Client, lokiClient *lokiclient.Client, subscriptionID string) Firehose {
+func NewLokiFirehoseNozzle(cfConfig *cfclient.Config, lokiClient *lokiclient.Client, subscriptionID string) Firehose {
 	return &LokiFirehoseNozzle{
 		cfConfig:       cfConfig,
-		cfClient:       cfClient,
 		lokiClient:     lokiClient,
 		subscriptionID: subscriptionID,
 	}
 }
 
 func (c *LokiFirehoseNozzle) Connect() (<-chan *events.Envelope, <-chan error) {
+	c.cfClient = c.createCFClinet()
 	cfConsumer := consumer.New(
 		c.cfClient.Endpoint.DopplerEndpoint,
 		&tls.Config{InsecureSkipVerify: c.cfConfig.SkipSslValidation},
@@ -55,6 +56,15 @@ func (c *LokiFirehoseNozzle) PostToLoki(e *events.Envelope) {
 	lastLineTime := time.Now()
 	labels, message := messages.GetMessage(e)
 	_ = c.lokiClient.Handle(labels, lastLineTime, message)
+}
+
+func (c *LokiFirehoseNozzle) createCFClinet() *cfclient.Client {
+	cfClient, err := cfclient.NewClient(c.cfConfig)
+	if err != nil {
+		log.Errorf("Encountered an error while setting up the cf client: %v", err)
+		return nil
+	}
+	return cfClient
 }
 
 type cfClientTokenRefresh struct {
