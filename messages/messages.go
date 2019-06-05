@@ -3,30 +3,41 @@ package messages
 import (
 	"fmt"
 
+	"github.com/bosh-loki/loki-firehose-nozzle/cache"
 	"github.com/bosh-loki/loki-firehose-nozzle/utils"
 	"github.com/cloudfoundry/sonde-go/events"
+	"github.com/prometheus/common/log"
 )
 
-func GetMessage(e *events.Envelope) (LabelSet, string) {
+type Event struct {
+	Labels LabelSet
+	Msg    string
+}
+
+func GetMessage(e *events.Envelope, c cache.Cache) *Event {
+	var event *Event
 	switch e.GetEventType() {
 	case events.Envelope_HttpStartStop:
-		return newHTTPStartStop(e)
+		event = newHTTPStartStop(e)
 	case events.Envelope_LogMessage:
-		return newLogMessage(e)
+		event = newLogMessage(e)
 	case events.Envelope_ContainerMetric:
-		return newContainerMetric(e)
+		event = newContainerMetric(e)
 	case events.Envelope_Error:
-		return newErrorEvent(e)
+		event = newErrorEvent(e)
 	case events.Envelope_ValueMetric:
-		return newValueMetric(e)
+		event = newValueMetric(e)
 	case events.Envelope_CounterEvent:
-		return newCounterEvent(e)
+		event = newCounterEvent(e)
 	}
-	return nil, ""
+	if _, hasAppID := event.Labels["cf_app_id"]; hasAppID {
+		AnnotateWithAppData(c, event)
+	}
+	return event
 }
 
 // newLogMessage creates a new newLogMessage
-func newLogMessage(e *events.Envelope) (LabelSet, string) {
+func newLogMessage(e *events.Envelope) *Event {
 	var m = e.GetLogMessage()
 	var r = LabelSet{
 		"cf_app_id":       m.GetAppId(),
@@ -41,11 +52,14 @@ func newLogMessage(e *events.Envelope) (LabelSet, string) {
 		"source_type":     m.GetSourceType(),
 	}
 	msg := string(m.GetMessage())
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
 }
 
 // newValueMetric creates a new newValueMetric
-func newValueMetric(e *events.Envelope) (LabelSet, string) {
+func newValueMetric(e *events.Envelope) *Event {
 	var m = e.GetValueMetric()
 	var r = LabelSet{
 		"cf_origin":  "firehose",
@@ -56,11 +70,14 @@ func newValueMetric(e *events.Envelope) (LabelSet, string) {
 		"origin":     e.GetOrigin(),
 	}
 	msg := fmt.Sprintf("%s = %g (%s)", m.GetName(), m.GetValue(), m.GetUnit())
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
 }
 
 // newHttpStartStop creates a new newHttpStartStop
-func newHTTPStartStop(e *events.Envelope) (LabelSet, string) {
+func newHTTPStartStop(e *events.Envelope) *Event {
 	var m = e.GetHttpStartStop()
 	var r = LabelSet{
 		"cf_origin":  "firehose",
@@ -77,11 +94,14 @@ func newHTTPStartStop(e *events.Envelope) (LabelSet, string) {
 		r["instance_id"] = m.GetInstanceId()
 	}
 	msg := fmt.Sprintf("%d %s %s (%d ms)", m.GetStatusCode(), m.GetMethod(), m.GetUri(), ((m.GetStopTimestamp()-m.GetStartTimestamp())/1000)/1000)
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
 }
 
 // newContainerMetric creates a new newContainerMetric
-func newContainerMetric(e *events.Envelope) (LabelSet, string) {
+func newContainerMetric(e *events.Envelope) *Event {
 	var m = e.GetContainerMetric()
 	var r = LabelSet{
 		"cf_app_id":  m.GetApplicationId(),
@@ -93,11 +113,14 @@ func newContainerMetric(e *events.Envelope) (LabelSet, string) {
 		"origin":     e.GetOrigin(),
 	}
 	msg := fmt.Sprintf("cpu_percentage=%g, memory_bytes=%d, disk_bytes=%d", m.GetCpuPercentage(), m.GetMemoryBytes(), m.GetDiskBytes())
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
 }
 
 // newCounterEvent creates a new newCounterEvent
-func newCounterEvent(e *events.Envelope) (LabelSet, string) {
+func newCounterEvent(e *events.Envelope) *Event {
 	var m = e.GetCounterEvent()
 	var r = LabelSet{
 		"cf_origin":  "firehose",
@@ -108,11 +131,14 @@ func newCounterEvent(e *events.Envelope) (LabelSet, string) {
 		"origin":     e.GetOrigin(),
 	}
 	msg := fmt.Sprintf("%s (delta=%d, total=%d)", m.GetName(), m.GetDelta(), m.GetTotal())
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
 }
 
 // newErrorEvent creates a new newErrorEvent
-func newErrorEvent(e *events.Envelope) (LabelSet, string) {
+func newErrorEvent(e *events.Envelope) *Event {
 	var m = e.GetError()
 	var r = LabelSet{
 		"cf_origin":  "firehose",
@@ -123,5 +149,46 @@ func newErrorEvent(e *events.Envelope) (LabelSet, string) {
 		"origin":     e.GetOrigin(),
 	}
 	msg := fmt.Sprintf("%d %s: %s", m.GetCode(), m.GetSource(), m.GetMessage())
-	return r, msg
+	return &Event{
+		Labels: r,
+		Msg:    msg,
+	}
+}
+
+func AnnotateWithAppData(appCache cache.Cache, e *Event) {
+	cfAppID := e.Labels["cf_app_id"]
+	appGUID := fmt.Sprintf("%s", cfAppID)
+
+	if appGUID != "<nil>" && cfAppID != "" {
+		appInfo, err := appCache.GetApp(appGUID)
+		if err != nil {
+			log.Errorf("Encountered an error while getting app info: %v", err)
+		}
+
+		cfAppName := appInfo.Name
+		cfSpaceID := appInfo.SpaceGuid
+		cfSpaceName := appInfo.SpaceName
+		cfOrgID := appInfo.OrgGuid
+		cfOrgName := appInfo.OrgName
+
+		if cfAppName != "" {
+			e.Labels["cf_app_name"] = cfAppName
+		}
+
+		if cfSpaceID != "" {
+			e.Labels["cf_space_id"] = cfSpaceID
+		}
+
+		if cfSpaceName != "" {
+			e.Labels["cf_space_name"] = cfSpaceName
+		}
+
+		if cfOrgID != "" {
+			e.Labels["cf_org_id"] = cfOrgID
+		}
+
+		if cfOrgName != "" {
+			e.Labels["cf_org_name"] = cfOrgName
+		}
+	}
 }
