@@ -1,0 +1,55 @@
+#This is configuration for loki-firehose-nozzle
+
+###################################################################
+# Cloud Foundry section
+###################################################################
+[cf]
+#cf api endpoint to connect to.
+api_endpoint = "https://api.cf.com"
+
+# when connecting over https, ignore bad ssl certificates
+skip_ssl_validation = false
+
+#Firehose subscription ID
+subscription_id = "loki"
+
+#UAA Client ID
+client_id = "loki-firehose"
+
+#UAA Client secret
+client_secret = "password"
+
+###################################################################
+# Loki section
+###################################################################
+[loki]
+#The address of Loki
+endpoint = "10.244.0.2"
+
+#The port of Loki
+port = 3100
+
+#comma separated additional labels pairs (e.g. env:dev,something:other)
+base_labels = ""
+
+###################################################################
+# Nozzle section
+###################################################################
+[nozzle]
+#Bolt Database path
+boltdb_path = "/var/vcap/data/boltdb"
+
+#how frequently the app info local cache invalidates
+app_cache_ttl = "0s"
+
+#restrict to APP_LIMITS most updated apps per request when populating the app metadata cache
+app_limits = 0
+
+#enable throttling on cache lookup for missing apps
+ignore_missing_apps = false
+
+#if the application is missing, then stop repeatedly querying application info from Cloud Foundry
+missing_app_cache_ttl = "0s"
+
+#how frequently the org and space cache invalidates
+org_space_cache_ttl = "72h"

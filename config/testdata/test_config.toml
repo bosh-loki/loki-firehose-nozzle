@@ -1,0 +1,19 @@
+[cf]
+api_endpoint = "https://api.cf.com"
+skip_ssl_validation = true
+subscription_id = "loki-nozzle"
+client_id = "user"
+client_secret = "password"
+
+[loki]
+endpoint = "10.244.0.2"
+port = 3100
+base_labels = "env:prod,region:us"
+
+[nozzle]
+boltdb_path = "/var/vcap/nozzle.db"
+app_cache_ttl = "0s"
+app_limits = 0
+ignore_missing_apps = false
+missing_app_cache_ttl = "0s"
+org_space_cache_ttl = "72h"
